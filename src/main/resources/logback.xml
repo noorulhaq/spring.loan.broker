@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="logback.xsd">
+
+	<appender name="consoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+	       <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>TRACE</level>
+		</filter>
+	</appender>
+
+
+	<appender name="asyncAppender" class="reactor.logback.AsyncAppender">
+		<appender-ref ref="consoleAppender" />
+	</appender>
+
+	<logger name="org.springframework.beans">
+		<level value="INFO" />
+	</logger>
+
+	<logger name="org.springframework.core">
+		<level value="INFO" />
+	</logger>
+	
+	<logger name="org.springframework.integration.store">
+		<level value="INFO" />
+	</logger>
+	
+	<logger name="org.springframework.security">
+		<level value="INFO" />
+	</logger>
+	
+	<logger name="org.apache.activemq">
+		<level value="INFO" />
+	</logger>
+	
+	<logger name="org.apache.kahadb">
+		<level value="INFO" />
+	</logger>
+	
+
+	<root>
+		<level value="DEBUG" />
+		<appender-ref ref="asyncAppender" />
+	</root>
+
+</configuration>

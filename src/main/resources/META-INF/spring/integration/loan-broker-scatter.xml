@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-scripting="http://www.springframework.org/schema/integration/scripting"
+	xmlns:jms="http://www.springframework.org/schema/integration/jms"
+	xmlns:stream="http://www.springframework.org/schema/integration/stream"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/integration
+		http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/integration/stream
+      	http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+      	http://www.springframework.org/schema/integration/jms
+		http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+      	http://www.springframework.org/schema/integration/scripting
+      	http://www.springframework.org/schema/integration/scripting/spring-integration-scripting.xsd
+      	http://www.springframework.org/schema/task
+      	http://www.springframework.org/schema/task/spring-task.xsd">
+	
+	
+	<int:gateway service-interface="org.springframework.integration.loanbroker.LoanBrokerGateway" 
+				 async-executor="" default-request-channel="best_quote_channel"/>
+	
+	<int:channel id="best_quote_channel"/>
+	
+	<int:chain input-channel="best_quote_channel" output-channel="best_quote_pubsub_channel">
+	
+		<int:header-enricher>
+			<int:header name="quote" expression="payload"/>
+			<int:header name="future" 
+			            expression="new org.springframework.util.concurrent.SettableListenableFuture()"/>
+			<int:header name="loan_broker_selector" 
+						expression="T(org.springframework.integration.loanbroker.NodeIdentificationUtil).nodeIdentifier()"/>			
+		</int:header-enricher>
+		
+		<int:transformer expression="headers.future"/>
+	
+		<int:claim-check-in message-store="loanBrokerRequestStore"/>
+	
+		<int:header-enricher>
+			<int:header name="loan_request_claim" expression="payload.toString()"/>
+			<int:header name="correlation_Id" expression="payload.toString()"/>
+			<int:header name="sequenceSize" expression="2"/>			
+		</int:header-enricher>
+
+		<int:transformer expression="headers.quote"/>
+	
+	</int:chain>
+
+	<int:publish-subscribe-channel id="best_quote_pubsub_channel" />
+
+	<jms:outbound-channel-adapter 
+			        channel="best_quote_pubsub_channel"
+					destination="standardBankInQueue"
+					session-transacted="true"
+					connection-factory="connectionFactory" 
+					auto-startup="true"/>				
+	
+	<jms:outbound-channel-adapter 
+			        channel="best_quote_pubsub_channel"
+					destination="primeBankInQueue"
+					session-transacted="true"
+					connection-factory="connectionFactory" 
+					auto-startup="true"/>
+
+	<int:transformer input-channel="best_quote_pubsub_channel" expression="headers.future"/>	
+	
+	<bean id="loanBrokerRequestTimeOutExpiryReaper" 
+		  class="org.springframework.integration.store.MessageGroupStoreReaper">
+		<property name="messageGroupStore" ref="loanBrokerRequestStore" />
+		<property name="timeout" value="10000" />
+	</bean>
+
+	<task:scheduled-tasks scheduler="loanBrokerRequestTimeOutExpiryScheduler">
+		<task:scheduled ref="loanBrokerRequestTimeOutExpiryReaper" method="run" fixed-rate="3000" />
+	</task:scheduled-tasks>	
+	
+	<task:scheduler id="loanBrokerRequestTimeOutExpiryScheduler"/>				
+
+</beans>

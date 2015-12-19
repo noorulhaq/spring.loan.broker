@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-scripting="http://www.springframework.org/schema/integration/scripting"
+	xmlns:jms="http://www.springframework.org/schema/integration/jms"
+	xmlns:stream="http://www.springframework.org/schema/integration/stream"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/integration
+		http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/integration/stream
+      	http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+      	http://www.springframework.org/schema/integration/jms
+		http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+      	http://www.springframework.org/schema/integration/scripting
+      	http://www.springframework.org/schema/integration/scripting/spring-integration-scripting.xsd
+      	http://www.springframework.org/schema/task
+      	http://www.springframework.org/schema/task/spring-task.xsd">
+	
+		
+	<jms:message-driven-channel-adapter 
+		destination="standardBankOutQueue" 
+		channel="best_qoute_selection_channel" 
+		auto-startup="true"
+		selector="loan_broker_selector = '#{T(org.springframework.integration.loanbroker.NodeIdentificationUtil).nodeIdentifier()}'"
+		connection-factory="connectionFactory"
+		concurrent-consumers="10"
+		max-concurrent-consumers="10"/>
+
+	<jms:message-driven-channel-adapter 
+		destination="primeBankOutQueue" 
+		channel="best_qoute_selection_channel" 
+		auto-startup="true"
+		selector="loan_broker_selector = '#{T(org.springframework.integration.loanbroker.NodeIdentificationUtil).nodeIdentifier()}'"
+		connection-factory="connectionFactory"
+		concurrent-consumers="10"
+		max-concurrent-consumers="10"/>
+	
+	<int:channel id="best_qoute_selection_channel"/>
+
+	<int:chain input-channel="best_qoute_selection_channel" output-channel="result_channel">
+
+		<int:aggregator release-strategy-expression="size()==2"
+						correlation-strategy-expression="headers['correlation_Id']"
+						send-partial-result-on-expiry="false"
+						expire-groups-upon-completion="true" 
+						expire-groups-upon-timeout="true"
+						message-store="loanBrokerResponseStore"/>
+						
+		<int:transformer >
+			<int-scripting:script lang="javascript">
+			<![CDATA[
+			     (function(){
+			     	 var indexRate = 10000; 
+			     	 for(i=0; i<payload.size(); i++){
+			     	   if(indexRate > payload.get(i))
+			     	 	  indexRate = payload.get(i);
+			     	 }
+			     	 return indexRate;
+			     })();
+	   		]]>			
+			</int-scripting:script>
+		</int:transformer>
+		
+		<int:header-enricher>
+			<int:header name="result" expression="payload"/>
+		</int:header-enricher>
+		
+		<int:transformer expression="T(java.util.UUID).fromString(headers.loan_request_claim)"/>
+		
+		<int:claim-check-out message-store="loanBrokerRequestStore" remove-message="true"/>
+		
+		<int:transformer expression="headers.result"/>
+	
+	</int:chain>
+
+	<int:channel id="result_channel"/>
+		
+	<int:logging-channel-adapter channel="result_channel" expression="headers.future.set(payload)" />
+	
+	<bean id="loanBrokerResponseTimeOutExpiryReaper" 
+		  class="org.springframework.integration.store.MessageGroupStoreReaper">
+		<property name="messageGroupStore" ref="loanBrokerResponseStore" />
+		<property name="timeout" value="10000" />
+	</bean>
+
+	<task:scheduled-tasks scheduler="loanBrokerResponseTimeOutExpiryScheduler">
+		<task:scheduled ref="loanBrokerResponseTimeOutExpiryReaper" method="run" fixed-rate="3000" />
+	</task:scheduled-tasks>	
+	
+	<task:scheduler id="loanBrokerResponseTimeOutExpiryScheduler"/>	
+</beans>

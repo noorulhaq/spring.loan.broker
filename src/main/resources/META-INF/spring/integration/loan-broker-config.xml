@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-scripting="http://www.springframework.org/schema/integration/scripting"
+	xmlns:jms="http://www.springframework.org/schema/integration/jms"
+	xmlns:stream="http://www.springframework.org/schema/integration/stream"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/integration
+		http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/integration/stream
+      	http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+      	http://www.springframework.org/schema/integration/jms
+		http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+      	http://www.springframework.org/schema/integration/scripting
+      	http://www.springframework.org/schema/integration/scripting/spring-integration-scripting.xsd
+      	http://www.springframework.org/schema/task
+      	http://www.springframework.org/schema/task/spring-task.xsd">
+      	
+      	
+ 	<bean name="loanBrokerRequestStore" class="org.springframework.integration.store.SimpleMessageStore"/>
+ 	
+ 	
+ 	<bean name="loanBrokerResponseStore" class="org.springframework.integration.store.SimpleMessageStore"/>
+ 	
+    
+    <bean id="standardBankInQueue" class="org.apache.activemq.command.ActiveMQQueue">
+		<constructor-arg value="standardBankIn.Q" />
+	</bean>
+
+    <bean id="primeBankInQueue" class="org.apache.activemq.command.ActiveMQQueue">
+		<constructor-arg value="primeBankIn.Q" />
+	</bean>
+	
+	
+    <bean id="standardBankOutQueue" class="org.apache.activemq.command.ActiveMQQueue">
+		<constructor-arg value="standardBankOut.Q" />
+	</bean>
+
+    <bean id="primeBankOutQueue" class="org.apache.activemq.command.ActiveMQQueue">
+		<constructor-arg value="primeBankOut.Q" />
+	</bean>
+	
+
+	<bean id="connectionFactory"
+		class="org.springframework.jms.connection.CachingConnectionFactory">
+		<property name="targetConnectionFactory">
+			<bean class="org.apache.activemq.ActiveMQConnectionFactory">
+				<property name="brokerURL" value="vm://localhost" />
+			</bean>
+		</property>
+		<property name="sessionCacheSize" value="10" />
+		<property name="cacheProducers" value="false" />
+	</bean>		
+
+
+</beans>
