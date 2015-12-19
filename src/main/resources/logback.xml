@@ -4,7 +4,8 @@
 
 	<appender name="consoleAppender" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
-	       <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n</pattern>
+	       <!-- <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n</pattern> -->
+	       <pattern>[%thread] %logger{0} - %msg%n</pattern>
 		</encoder>
 		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
 			<level>TRACE</level>
