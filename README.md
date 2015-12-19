@@ -1,5 +1,7 @@
 # spring.loan.broker
-Spring loan broker demostrate how you can develop a non-blocking rest service in a spring based application. Below are some of the captured logs from one of the test execution.
+Spring loan broker demostrate how you can develop a non-blocking rest service in a spring based application. Below are some of the captured logs from one of the test execution. Read below article for more detail.
+
+https://dzone.com/articles/non-blocking-rest-services-with-spring
 
 ```
 [http-nio-8080-exec-1] DispatcherServlet - DispatcherServlet with name 'dispatcherServlet' processing GET request for [/quotation]
@@ -29,4 +31,4 @@ Spring loan broker demostrate how you can develop a non-blocking rest service in
 ....
 [http-nio-8080-exec-2] DispatcherServlet - Successfully completed request
 ```
-You can test timeout scenario by sending loan amount <= 10. This will fail outcome from one of the bank. Handling failure strategy is subjective to requirement. Hence, in this example partial failures are not acceptable. In case you are interested to load test the example, you can find JMeter test plan in source code.
+You can test timeout scenario by requesting loan amount <= 10. This will fail outcome from one of the bank. Failure strategy is subjective to requirement. Hence, in this example partial failures are not acceptable. In case you are interested to load test the example, you can find JMeter test plan in source code.
